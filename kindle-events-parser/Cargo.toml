@@ -1,0 +1,15 @@
+[package]
+name = "kindle-events-screen"
+version = "0.1.0"
+authors = ["david <davidventura27@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+phf = { version = "0.8.0", features = ["macros"] }
+
+[profile.release]
+opt-level = 'z' # opt for size
+lto = true
+panic = "abort"
