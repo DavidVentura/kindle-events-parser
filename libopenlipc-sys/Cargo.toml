@@ -4,7 +4,8 @@ version = "0.1.0"
 authors = ["david"]
 edition = "2018"
 description = "Wrapper around liblipc to interact with Kindle dbus-based LIPC events"
-license = "GPLv3"
+license = "LGPL-3.0"
+repository = "https://github.com/DavidVentura/kindle-events-parser/tree/master/libopenlipc-sys"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
