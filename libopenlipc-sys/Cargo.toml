@@ -11,3 +11,6 @@ repository = "https://github.com/DavidVentura/kindle-events-parser/tree/master/l
 
 [dependencies]
 enum_primitive = "0.1.1"
+
+[package.metadata.docs.rs]
+default-target = "armv7-unknown-linux-gnueabi"
