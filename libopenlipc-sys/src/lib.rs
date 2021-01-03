@@ -19,14 +19,26 @@ pub struct rLIPC {
     conn: *mut LIPC,
 }
 
+macro_rules! code_to_result {
+    ($value:expr) => {
+        if $value == LIPCcode_LIPC_OK {
+            Ok(())
+        } else {
+            Err(format!(
+                "Failed to subscribe: {}",
+                rLIPC::code_to_string($value)
+            ))
+        }
+    };
+}
+
 impl rLIPC {
     pub fn new() -> Result<Self, String> {
         let lipc;
         unsafe {
             lipc = LipcOpenNoName();
         }
-        if lipc == 0 as *mut c_void {
-            // FIXME: NULL
+        if lipc == (std::ptr::null_mut() as *mut c_void) {
             return Err(String::from("Failed to open a connection!"));
         }
         return Ok(Self { conn: lipc });
@@ -61,7 +73,7 @@ impl rLIPC {
          * then we have to undo this in the callback
          */
 
-        let code;
+        let result;
         unsafe {
             /* We wait to cast to .as_ptr() here
              * For a pointer to be valid, the thing it points to must still be around.
@@ -70,21 +82,15 @@ impl rLIPC {
              * We must store the CString for _service and c_name, then independently get pointers
              * *to* them
              */
-            code = LipcSubscribeExt(
+            result = code_to_result!(LipcSubscribeExt(
                 self.conn,
                 _service.as_ptr(),
                 c_name,
                 Some(ugly_callback),
                 ptr as *mut c_void,
-            );
+            ));
         }
-        match code {
-            LIPCcode_LIPC_OK => Ok(()),
-            _ => Err(format!(
-                "Failed to subscribe: {}",
-                rLIPC::code_to_string(code)
-            )),
-        }
+        result
     }
 
     pub fn get_str_prop(&self, service: &str, prop: &str) -> Result<String, String> {
@@ -93,14 +99,15 @@ impl rLIPC {
 
         let service = CString::new(service).unwrap();
         let prop = CString::new(prop).unwrap();
-        let code;
         unsafe {
-            code = LipcGetStringProperty(self.conn, service.as_ptr(), prop.as_ptr(), handle_ptr);
+            code_to_result!(LipcGetStringProperty(
+                self.conn,
+                service.as_ptr(),
+                prop.as_ptr(),
+                handle_ptr
+            ))?;
         };
 
-        if code != LIPCcode_LIPC_OK {
-            return Err(rLIPC::code_to_string(code));
-        }
         let val;
         unsafe {
             val = CStr::from_ptr(handle).to_str().unwrap().to_owned().clone();
@@ -113,14 +120,15 @@ impl rLIPC {
         let mut val: c_int = 0;
         let service = CString::new(service).unwrap();
         let prop = CString::new(prop).unwrap();
-        let code;
         unsafe {
-            code = LipcGetIntProperty(self.conn, service.as_ptr(), prop.as_ptr(), &mut val);
+            code_to_result!(LipcGetIntProperty(
+                self.conn,
+                service.as_ptr(),
+                prop.as_ptr(),
+                &mut val
+            ))?;
         };
 
-        if code != LIPCcode_LIPC_OK {
-            return Err(rLIPC::code_to_string(code));
-        }
         Ok(val)
     }
 
