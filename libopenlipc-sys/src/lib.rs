@@ -43,7 +43,8 @@ impl rLIPC {
     /// you can filter to a single event by providing `name`.
     ///
     /// For callback, we pass (source, name, optional int param, optional str param).
-    ///
+    /// an example callback payload would be
+    /// "com.lab126.appmgrd", "appActivating", Some(1), Some("com.lab126.booklet.reader")
     ///
     /// # Examples
     ///
