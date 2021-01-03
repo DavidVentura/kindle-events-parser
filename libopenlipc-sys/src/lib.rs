@@ -42,19 +42,23 @@ impl rLIPC {
     /// Register a callback for events broadcasted by `service`. Optionally,
     /// you can filter to a single event by providing `name`.
     ///
-    /// For callback, we pass (source, name).
+    /// For callback, we pass (source, name, optional int param, optional str param).
+    ///
     ///
     /// # Examples
     ///
     /// ```
-    /// let r = rLIPC.new();
-    /// r.subscribe("com.lab126.powerd", Some("battLevel"), |_, _| ());
+    /// use libopenlipc_sys::rLIPC;
+    /// let r = rLIPC::new().unwrap();
+    /// r.subscribe("com.lab126.powerd", Some("battLevelChanged"), |_, _, _, _| ());
     /// // You will only get updates about battLevel in the callback
+    /// // battLevelChanged sends <int param> with the new battery value
     /// ```
     ///
     /// ```
-    /// let r = rLIPC.new();
-    /// r.subscribe("com.lab126.powerd", None, |_, _| ());
+    /// use libopenlipc_sys::rLIPC;
+    /// let r = rLIPC::new().unwrap();
+    /// r.subscribe("com.lab126.powerd", None, |_, _, _, _| ());
     /// // You will get updates all power related events (screen on, off, etc)
     /// ```
     pub fn subscribe<F>(&self, service: &str, name: Option<&str>, callback: F) -> Result<(), String>
@@ -107,7 +111,8 @@ impl rLIPC {
 
     /// Get the current value of a string property
     /// ```
-    /// let r = rLIPC.new();
+    /// use libopenlipc_sys::rLIPC;
+    /// let r = rLIPC::new().unwrap();
     /// let reader_status = r.get_str_prop("com.lab126.acxreaderplugin", "allReaderData").unwrap();
     /// // reader_status would be a string containing JSON
     /// ```
@@ -137,7 +142,8 @@ impl rLIPC {
 
     /// Get the current value of an int property
     /// ```
-    /// let r = rLIPC.new();
+    /// use libopenlipc_sys::rLIPC;
+    /// let r = rLIPC::new().unwrap();
     /// let reader_status = r.get_int_prop("com.lab126.powerd", "battLevel").unwrap();
     /// // reader_status will contain the battery charge % (ie: 75).
     /// ```
