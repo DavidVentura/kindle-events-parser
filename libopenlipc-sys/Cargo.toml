@@ -3,6 +3,8 @@ name = "libopenlipc-sys"
 version = "0.1.0"
 authors = ["david"]
 edition = "2018"
+description = "Wrapper around liblipc to interact with Kindle dbus-based LIPC events"
+license = "GPLv3"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
