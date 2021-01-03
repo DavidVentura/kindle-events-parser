@@ -3,11 +3,6 @@ use std::io::{self, Write};
 
 fn main() {
     let r = rLIPC::new().unwrap();
-    let reader_status = r
-        .get_str_prop("com.lab126.acxreaderplugin", "allReaderData")
-        .unwrap();
-    println!("allreader data: {}", reader_status);
-
     let batt = r.get_int_prop("com.lab126.powerd", "battLevel").unwrap();
     println!("Battery: {}", batt);
     let batt_t = r.get_int_prop("com.lab126.powerd", "battTemperature");
@@ -17,7 +12,14 @@ fn main() {
     }
 
     println!("Subscribing to ALL power events");
-    let res = r.subscribe("com.lab126.powerd", None, |a, b| println!("[{}] {}", a, b));
+    let res = r.subscribe("com.lab126.powerd", None, |a, b| {
+        println!("[{}] {}", a, b);
+
+        let reader_status = r
+            .get_str_prop("com.lab126.acxreaderplugin", "allReaderData")
+            .unwrap();
+        println!("allreader data: {}", reader_status);
+    });
     if res.is_err() {
         println!("Failed to subscribe!! {:?}", res);
         return;

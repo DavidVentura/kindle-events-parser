@@ -55,12 +55,10 @@ impl rLIPC {
     /// r.subscribe("com.lab126.powerd", None, |_, _| ());
     /// // You will get updates all power related events (screen on, off, etc)
     /// ```
-    pub fn subscribe(
-        &self,
-        service: &str,
-        name: Option<&str>,
-        callback: fn(&str, &str) -> (),
-    ) -> Result<(), String> {
+    pub fn subscribe<F>(&self, service: &str, name: Option<&str>, callback: F) -> Result<(), String>
+    where
+        F: Fn(&str, &str) + Send,
+    {
         let _service = CString::new(service).unwrap();
 
         let owned;
@@ -186,3 +184,5 @@ impl Drop for rLIPC {
         println!("Disconnected");
     }
 }
+
+unsafe impl Sync for rLIPC {}
