@@ -59,7 +59,7 @@ impl rLIPC {
     /// ```
     pub fn subscribe<F>(&self, service: &str, name: Option<&str>, callback: F) -> Result<(), String>
     where
-        F: Fn(&str, &str) + Send,
+        F: Fn(&str, &str, Option<i32>, Option<String>) + Send,
     {
         let _service = CString::new(service).unwrap();
 
@@ -72,7 +72,8 @@ impl rLIPC {
             }
         };
 
-        let boxed_fn: Box<dyn FnMut(&str, &str) + Send> = Box::new(callback) as _;
+        let boxed_fn: Box<dyn FnMut(&str, &str, Option<i32>, Option<String>) + Send> =
+            Box::new(callback) as _;
         let double_box = Box::new(boxed_fn);
         let ptr = Box::into_raw(double_box);
         /*
@@ -170,11 +171,50 @@ unsafe extern "C" fn ugly_callback(
     event: *mut LIPCevent,
     data: *mut c_void,
 ) -> LIPCcode {
+    // Can't unwrap in this function
     let source = LipcGetEventSource(event);
     let _name = CStr::from_ptr(name).to_str().unwrap();
     let _source = CStr::from_ptr(source).to_str().unwrap();
-    let f = data as *mut Box<dyn FnMut(&str, &str) + Send>;
-    (*f)(_source, _name);
+
+    let _int_param: Option<i32>;
+    let _str_param: Option<String>;
+
+    {
+        let mut int_param: c_int = 0;
+        _int_param = match ReturnCodes::from_u32(LipcGetIntParam(event, &mut int_param)).unwrap() {
+            ReturnCodes::OK => Some(int_param.into()),
+            ReturnCodes::ERROR_NO_SUCH_PARAM => None,
+            e => {
+                println!(
+                    "Error getting int param: {}",
+                    rLIPC::code_to_string(e as u32)
+                );
+                None
+            }
+        }
+    }
+
+    {
+        let mut handle: *mut c_char = std::ptr::null_mut();
+        let handle_ptr: *mut *mut c_char = &mut handle;
+        _str_param = match ReturnCodes::from_u32(LipcGetStringParam(event, handle_ptr)).unwrap() {
+            ReturnCodes::OK => {
+                let val = CStr::from_ptr(handle).to_str().unwrap().to_owned().clone();
+                Some(val)
+            }
+            ReturnCodes::ERROR_NO_SUCH_PARAM => None,
+            e => {
+                println!(
+                    "Error getting string param: {}",
+                    rLIPC::code_to_string(e as u32)
+                );
+                None
+            }
+        }
+    }
+
+    let f = data as *mut Box<dyn FnMut(&str, &str, Option<i32>, Option<String>) + Send>;
+    (*f)(_source, _name, _int_param, _str_param);
     return 0;
 }
 
