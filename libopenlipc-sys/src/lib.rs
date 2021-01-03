@@ -42,6 +42,8 @@ impl rLIPC {
     /// Register a callback for events broadcasted by `service`. Optionally,
     /// you can filter to a single event by providing `name`.
     ///
+    /// For callback, we pass (source, name).
+    ///
     /// # Examples
     ///
     /// ```
@@ -172,7 +174,7 @@ unsafe extern "C" fn ugly_callback(
     let _name = CStr::from_ptr(name).to_str().unwrap();
     let _source = CStr::from_ptr(source).to_str().unwrap();
     let f = data as *mut Box<dyn FnMut(&str, &str) + Send>;
-    (*f)(_name, _source);
+    (*f)(_source, _name);
     return 0;
 }
 
