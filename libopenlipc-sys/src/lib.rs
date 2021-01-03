@@ -1,19 +1,12 @@
 #![allow(non_upper_case_globals)]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
+#![allow(dead_code)]
 include!("./bindings.rs");
 
 use std::ffi::CStr;
 use std::ffi::CString;
 use std::os::raw::{c_char, c_int, c_void};
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
-    }
-}
 
 pub struct rLIPC {
     conn: *mut LIPC,
@@ -33,6 +26,8 @@ macro_rules! code_to_result {
 }
 
 impl rLIPC {
+    /// Returns a new LIPC client if a connection was successful
+    /// Connects to the LIPC bus with no name.
     pub fn new() -> Result<Self, String> {
         let lipc;
         unsafe {
@@ -44,6 +39,22 @@ impl rLIPC {
         return Ok(Self { conn: lipc });
     }
 
+    /// Register a callback for events broadcasted by `service`. Optionally,
+    /// you can filter to a single event by providing `name`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let r = rLIPC.new();
+    /// r.subscribe("com.lab126.powerd", Some("battLevel"), |_, _| ());
+    /// // You will only get updates about battLevel in the callback
+    /// ```
+    ///
+    /// ```
+    /// let r = rLIPC.new();
+    /// r.subscribe("com.lab126.powerd", None, |_, _| ());
+    /// // You will get updates all power related events (screen on, off, etc)
+    /// ```
     pub fn subscribe(
         &self,
         service: &str,
@@ -93,6 +104,12 @@ impl rLIPC {
         result
     }
 
+    /// Get the current value of a string property
+    /// ```
+    /// let r = rLIPC.new();
+    /// let reader_status = r.get_str_prop("com.lab126.acxreaderplugin", "allReaderData").unwrap();
+    /// // reader_status would be a string containing JSON
+    /// ```
     pub fn get_str_prop(&self, service: &str, prop: &str) -> Result<String, String> {
         let mut handle: *mut c_char = std::ptr::null_mut();
         let handle_ptr: *mut *mut c_char = &mut handle;
@@ -116,6 +133,13 @@ impl rLIPC {
         }
         Ok(val)
     }
+
+    /// Get the current value of an int property
+    /// ```
+    /// let r = rLIPC.new();
+    /// let reader_status = r.get_int_prop("com.lab126.powerd", "battLevel").unwrap();
+    /// // reader_status will contain the battery charge % (ie: 75).
+    /// ```
     pub fn get_int_prop(&self, service: &str, prop: &str) -> Result<i32, String> {
         let mut val: c_int = 0;
         let service = CString::new(service).unwrap();
