@@ -1,10 +1,6 @@
 use libopenlipc_sys::rLIPC;
 use phf::phf_map;
-use std::io::{BufRead, BufReader};
-use std::process::{Command, Stdio};
-use std::sync::mpsc;
-use std::sync::mpsc::{Receiver, Sender};
-use std::thread::spawn;
+use std::io::{self, Write};
 
 #[derive(Clone, Debug)]
 enum Event {
@@ -46,75 +42,52 @@ static EVENT_TO_TOPIC: phf::Map<Event, &'static str> = phf_map! {
 #[allow(unused_variables)]
 fn publish(topic: &str, value: &str) {}
 
-fn run_and_match(filter: EventFilter, tx: Sender<EventData>) {
-    // event_source: &str, event_name: &str
-    let mut c = Command::new("lipc-wait-event")
-        .args(vec!["-m", filter.source, filter.events.join(",").as_str()])
-        .stdout(Stdio::piped())
-        .spawn()
-        .expect(format!("Could not start lipc-wait-event with filter {:?}", filter).as_str());
-
-    let stdout = c.stdout.as_mut().unwrap();
-    let reader = BufReader::new(stdout);
-    for result in reader.lines() {
-        if result.is_err() {
-            println!("Error!: {:?}", result);
-            continue;
-        }
-        let line = result.unwrap();
-        println!("[{}] {}", filter.source, line);
-        for k in MAP.keys().into_iter() {
-            if line.starts_with(k) {
-                let event = MAP.get(k).unwrap().clone();
-                println!("This is a <{:?}> Event", event);
-                let ed = EventData { event, data: line };
-                tx.send(ed).unwrap();
-                break;
+fn run_and_match(source: &str, in_event: &str, intarg: Option<i32>, strarg: Option<String>) {
+    println!("[{}] {} || {:?} || {:?}", source, in_event, intarg, strarg);
+    for k in MAP.keys().into_iter() {
+        if in_event.to_string() == k.to_string() {
+            let event = MAP.get(k).unwrap().clone();
+            match (event, intarg, strarg) {
+                (Event::BatteryChanged, Some(batt), _) => {
+                    println!("Battery at {}%", batt);
+                }
+                (Event::Connected, _, _) => println!("Wifi Connected"),
+                (Event::ScreenOn, _, _) => println!("Screen on"),
+                (Event::ScreenOff, _, _) => println!("Screen off"),
+                _ => println!("No idea what i got.."),
             }
+            break;
         }
     }
-    c.wait().unwrap();
 }
 
 fn main() {
     println!("Started!");
-    let (tx, rx): (Sender<EventData>, Receiver<EventData>) = mpsc::channel();
-
-    let mut workers = Vec::new();
-
     let r = rLIPC::new().unwrap();
 
     for filter in vec![
         EventFilter {
             source: "com.lab126.powerd",
-            events: vec!["goingToScreenSaver", "battLevelChanged"],
+            //events: vec!["goingToScreenSaver", "battLevelChanged"],
+            events: vec![],
         },
         EventFilter {
             source: "com.lab126.wifid",
             events: vec!["cmConnected"],
         },
     ] {
-        let _tx = tx.clone();
-        workers.push(spawn(|| run_and_match(filter, _tx)));
+        if filter.events.is_empty() {
+            r.subscribe(filter.source, None, run_and_match).unwrap();
+        } else {
+            for e in filter.events {
+                r.subscribe(filter.source, Some(e), run_and_match).unwrap();
+            }
+        }
     }
 
-    let event_parser = spawn(move || loop {
-        let rcv = rx.recv().unwrap();
-        match (rcv.event, rcv.data) {
-            (Event::BatteryChanged, data) => {
-                // "battLevelChanged <> " where <> is u32 always -> i32 (using -1 to indicate some
-                // unexpected error?)
-                let battery_status = data.split(" ").nth(1).unwrap_or("-1").parse().unwrap_or(-1);
-                println!("Battery at {}%", battery_status);
-            }
-            (Event::Connected, _) => println!("Wifi Connected"),
-            (Event::ScreenOn, _) => println!("Screen on"),
-            (Event::ScreenOff, _) => println!("Screen off"),
-        }
-    });
-
-    workers.push(event_parser);
-    for w in workers {
-        w.join().expect("Job died!");
+    loop {
+        std::thread::sleep(std::time::Duration::from_secs(1));
+        print!(".");
+        io::stdout().flush().unwrap();
     }
 }

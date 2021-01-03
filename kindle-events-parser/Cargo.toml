@@ -12,5 +12,5 @@ libopenlipc-sys = { path = "../libopenlipc-sys" }
 
 [profile.release]
 opt-level = 'z' # opt for size
-lto = true
-panic = "abort"
+#lto = true
+#panic = "abort"
