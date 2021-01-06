@@ -30,11 +30,11 @@ mod tests {
 
 use std::io::prelude::*;
 use std::io::{self, Read};
-use std::net::TcpStream;
+use std::net::{SocketAddr, TcpStream, ToSocketAddrs};
 
 pub struct Client {
     name: String,
-    server: std::net::SocketAddr,
+    server: String,
 }
 pub struct ConnectedClient {
     socket: TcpStream,
@@ -68,7 +68,7 @@ impl Client {
     pub fn new(name: String, server: String) -> Result<Client, std::net::AddrParseError> {
         Ok(Client {
             name,
-            server: format!("{}:1883", server).parse()?,
+            server: format!("{}:1883", server),
         })
     }
 
@@ -77,8 +77,15 @@ impl Client {
         keepalive: u8,
     ) -> Result<ConnectedClient, Box<dyn std::error::Error>> {
         let payload = Protocol::connect_payload(self.name.as_ref(), keepalive);
-        let mut stream =
-            TcpStream::connect_timeout(&self.server, std::time::Duration::from_secs(3))?;
+        println!("Conencting to {}", self.server);
+        let s: Vec<_> = self
+            .server
+            .to_socket_addrs()
+            .expect("Failed to resolve domain")
+            .collect();
+        let s = &s.into_iter().next().unwrap();
+        println!("Conencting to {:?}", s);
+        let mut stream = TcpStream::connect_timeout(s, std::time::Duration::from_secs(3))?;
         stream.write(payload.as_ref())?;
 
         let mut buf = vec![0 as u8; 4];
