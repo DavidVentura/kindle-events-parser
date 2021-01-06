@@ -51,6 +51,19 @@ pub enum QoS {
     ExactlyOnce = 2,
 }
 
+pub fn publish_once(
+    name: String,
+    server: String,
+    topic: &str,
+    message: &str,
+    retain: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let mut c = Client::new(name, server)?;
+    let mut cc = c.connect(5)?;
+    cc.publish(topic, message, retain, QoS::AtMostOnce)?;
+    Ok(())
+}
+
 impl Client {
     pub fn new(name: String, server: String) -> Result<Client, std::net::AddrParseError> {
         Ok(Client {
