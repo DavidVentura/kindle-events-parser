@@ -9,6 +9,7 @@ edition = "2018"
 [dependencies]
 phf = { version = "0.8.0", features = ["macros"] }
 libopenlipc-sys = { path = "../libopenlipc-sys" }
+mqtt-simple = { path = "../mqtt-simple" }
 
 [profile.release]
 opt-level = 'z' # opt for size

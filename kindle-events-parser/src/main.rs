@@ -1,19 +1,14 @@
 use libopenlipc_sys::rLIPC;
-use phf::phf_map;
+use mqtt_simple::publish_once;
 use std::io::{self, Write};
 
 #[derive(Clone, Debug)]
-enum Event {
-    Connected,
+enum Events {
+    WifiConnected,
     ScreenOff,
     ScreenOn,
     BatteryChanged,
-}
-
-#[derive(Debug)]
-struct EventData {
-    event: Event,
-    data: String,
+    Unknown,
 }
 
 #[derive(Debug)]
@@ -22,47 +17,76 @@ struct EventFilter<'a> {
     events: Vec<&'a str>,
 }
 
-static MAP: phf::Map<&'static str, Event> = phf_map! {
-    "cmConnected" => Event::Connected,
-    "goingToScreenSaver" => Event::ScreenOff,
-    "outOfScreenSaver" => Event::ScreenOn,
-    "battLevelChanged" => Event::BatteryChanged,
-};
-
-/*
-static EVENT_TO_TOPIC: phf::Map<Event, &'static str> = phf_map! {
-    Event::Connected => "KINDLE/CONNECTED",
-    Event::ScreenOn => "KINDLE/SCREEN_STATE",
-    Event::ScreenOff => "KINDLE/SCREEN_STATE",
- => "KINDLE/CONNECTED",
-};
-
-*/
-#[allow(dead_code)]
-#[allow(unused_variables)]
-fn publish(topic: &str, value: &str) {}
+impl Events {
+    fn from_str(s: &str) -> Events {
+        match s {
+            "cmConnected" => Events::WifiConnected,
+            "goingToScreenSaver" => Events::ScreenOff,
+            "outOfScreenSaver" => Events::ScreenOn,
+            "battLevelChanged" => Events::BatteryChanged,
+            _ => Events::Unknown,
+        }
+    }
+    fn to_topic(&self) -> Option<&'static str> {
+        match self {
+            Events::WifiConnected => Some("KINDLE/CONNECTED"),
+            Events::ScreenOff => Some("KINDLE/SCREEN_STATE"),
+            Events::ScreenOn => Some("KINDLE/SCREEN_STATE"),
+            Events::BatteryChanged => Some("KINDLE/BATTERY_STATE"),
+            Events::Unknown => None,
+        }
+    }
+}
 
 fn run_and_match(source: &str, in_event: &str, intarg: Option<i32>, strarg: Option<String>) {
     println!("[{}] {} || {:?} || {:?}", source, in_event, intarg, strarg);
-    for k in MAP.keys().into_iter() {
-        if in_event.to_string() == k.to_string() {
-            let event = MAP.get(k).unwrap().clone();
-            match (event, intarg, strarg) {
-                (Event::BatteryChanged, Some(batt), _) => {
-                    println!("Battery at {}%", batt);
-                }
-                (Event::Connected, _, _) => println!("Wifi Connected"),
-                (Event::ScreenOn, _, _) => println!("Screen on"),
-                (Event::ScreenOff, _, _) => println!("Screen off"),
-                _ => println!("No idea what i got.."),
-            }
-            break;
+
+    let ev = Events::from_str(in_event);
+    let topic = ev.to_topic();
+
+    let msg = match (ev, intarg, strarg) {
+        (Events::BatteryChanged, Some(batt), _) => {
+            println!("Battery at {}%", batt);
+            Some(batt.to_string())
+        }
+        (Events::WifiConnected, _, _) => {
+            println!("Wifi Connected");
+            Some(String::from("1"))
+        }
+        (Events::ScreenOn, _, _) => {
+            println!("Screen on");
+            Some(String::from("1"))
+        }
+        (Events::ScreenOff, _, _) => {
+            println!("Screen off");
+            Some(String::from("0"))
+        }
+        _ => {
+            println!("No idea what i got..");
+            None
+        }
+    };
+
+    if let Some(m) = msg {
+        let topic = topic.unwrap();
+        println!("Publishing {} to {}", m, topic);
+        let res = publish_once(
+            String::from("KINDLE"),
+            String::from("192.168.20.125"),
+            topic,
+            m.as_str(),
+            false,
+        );
+        match res {
+            Err(e) => println!("Failed to publish! {:?}", e),
+            Ok(()) => (),
         }
     }
 }
 
 fn main() {
     println!("Started!");
+
     let r = rLIPC::new().unwrap();
 
     for filter in vec![
@@ -72,15 +96,25 @@ fn main() {
             events: vec![],
         },
         EventFilter {
+            source: "com.lab126.appmgrd",
+            events: vec![],
+        },
+        EventFilter {
             source: "com.lab126.wifid",
             events: vec!["cmConnected"],
         },
     ] {
         if filter.events.is_empty() {
-            r.subscribe(filter.source, None, run_and_match).unwrap();
+            r.subscribe(filter.source, None, |source, ev, intarg, strarg| {
+                run_and_match(source, ev, intarg, strarg)
+            })
+            .unwrap();
         } else {
             for e in filter.events {
-                r.subscribe(filter.source, Some(e), run_and_match).unwrap();
+                r.subscribe(filter.source, Some(e), |source, ev, intarg, strarg| {
+                    run_and_match(source, ev, intarg, strarg)
+                })
+                .unwrap();
             }
         }
     }
