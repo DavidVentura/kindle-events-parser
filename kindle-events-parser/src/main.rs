@@ -4,6 +4,7 @@ use std::io::{self, Write};
 
 #[derive(Clone, Debug)]
 enum Events {
+    WifiDisconnected,
     WifiConnected,
     ScreenOff,
     ScreenOn,
@@ -24,11 +25,14 @@ impl Events {
             "goingToScreenSaver" => Events::ScreenOff,
             "outOfScreenSaver" => Events::ScreenOn,
             "battLevelChanged" => Events::BatteryChanged,
+            "suspending" => Events::WifiDisconnected,
+            "readyToSuspend" => Events::WifiDisconnected,
             _ => Events::Unknown,
         }
     }
     fn to_topic(&self) -> Option<&'static str> {
         match self {
+            Events::WifiDisconnected => Some("KINDLE/CONNECTED"),
             Events::WifiConnected => Some("KINDLE/CONNECTED"),
             Events::ScreenOff => Some("KINDLE/SCREEN_STATE"),
             Events::ScreenOn => Some("KINDLE/SCREEN_STATE"),
@@ -48,6 +52,10 @@ fn run_and_match(source: &str, in_event: &str, intarg: Option<i32>, strarg: Opti
         (Events::BatteryChanged, Some(batt), _) => {
             println!("Battery at {}%", batt);
             Some(batt.to_string())
+        }
+        (Events::WifiDisconnected, _, _) => {
+            println!("Wifi Disconnected");
+            Some(String::from("0"))
         }
         (Events::WifiConnected, _, _) => {
             println!("Wifi Connected");
