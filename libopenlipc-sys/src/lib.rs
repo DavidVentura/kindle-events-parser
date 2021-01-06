@@ -64,7 +64,7 @@ impl rLIPC {
     /// ```
     pub fn subscribe<F>(&self, service: &str, name: Option<&str>, callback: F) -> Result<(), String>
     where
-        F: Fn(&str, &str, Option<i32>, Option<String>) + Send,
+        F: FnMut(&str, &str, Option<i32>, Option<String>) + Send,
     {
         let _service = CString::new(service).unwrap();
 
