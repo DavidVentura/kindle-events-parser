@@ -67,6 +67,7 @@ fn run_and_match(source: &str, in_event: &str, intarg: Option<i32>, strarg: Opti
         }
         (Events::ScreenOff, _, _) => {
             println!("Screen off");
+            publish_current_book_status();
             Some(String::from("0"))
         }
         _ => {
@@ -80,7 +81,7 @@ fn run_and_match(source: &str, in_event: &str, intarg: Option<i32>, strarg: Opti
         println!("Publishing {} to {}", m, topic);
         let res = publish_once(
             String::from("KINDLE"),
-            String::from("192.168.20.125"),
+            String::from("iot.labs"),
             topic,
             m.as_str(),
             false,
@@ -131,5 +132,28 @@ fn main() {
         std::thread::sleep(std::time::Duration::from_secs(1));
         print!(".");
         io::stdout().flush().unwrap();
+    }
+}
+
+fn publish_current_book_status() {
+    let r = rLIPC::new().unwrap();
+    let reader_status = r
+        .get_str_prop("com.lab126.acxreaderplugin", "allReaderData")
+        .unwrap();
+    println!("Book status: {}", reader_status);
+    if reader_status == "{}" {
+        println!("No status to publish");
+        return;
+    }
+    let res = publish_once(
+        String::from("KINDLE"),
+        String::from("iot.labs"),
+        "KINDLE/BOOK",
+        reader_status.as_str(),
+        false,
+    );
+    match res {
+        Err(e) => println!("Failed to publish! {:?}", e),
+        Ok(()) => println!("Published book status!"),
     }
 }
