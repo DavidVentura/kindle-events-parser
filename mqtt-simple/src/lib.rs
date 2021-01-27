@@ -179,11 +179,7 @@ impl Client {
     ) -> Result<ConnectedClient, Box<dyn std::error::Error>> {
         let payload = Protocol::connect_payload(self.name.as_ref(), keepalive);
         println!("Conencting to {}", self.server);
-        let s: Vec<_> = self
-            .server
-            .to_socket_addrs()
-            .expect("Failed to resolve domain")
-            .collect();
+        let s: Vec<_> = self.server.to_socket_addrs()?.collect();
         let s = &s.into_iter().next().unwrap();
         println!("Conencting to {:?}", s);
         let mut stream = TcpStream::connect_timeout(s, std::time::Duration::from_secs(3))?;
