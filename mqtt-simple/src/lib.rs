@@ -171,17 +171,17 @@ impl Protocol {
         let mut pkt: Vec<u8> = Vec::new();
         pkt.push(0x30);
 
-        let mut size: u8 = 2 + topic.len() as u8 + msg.len() as u8;
+        let mut size: u16 = 2 + topic.len() as u16 + msg.len() as u16;
         if qos > QoS::AtMostOnce {
             size += 2
         }
         pkt[0] |= ((qos as u8) << 1) | (retain as u8);
 
         while size > 0x7f {
-            pkt.push((size & 0x7f) | 0x80);
+            pkt.push(((size & 0x7f) | 0x80) as u8);
             size >>= 7;
         }
-        pkt.push(size);
+        pkt.push(size as u8);
         pkt.extend(Protocol::to_big_endian(topic.len() as u16));
         pkt.extend(topic.as_bytes());
 
