@@ -12,6 +12,9 @@ libopenlipc-sys = { path = "../libopenlipc-sys" }
 mqtt-simple = { path = "../mqtt-simple" }
 
 [profile.release]
-opt-level = 'z' # opt for size
+strip = "symbols"
 #lto = true
 #panic = "abort"
+
+[profile.dev]
+strip = "symbols"
