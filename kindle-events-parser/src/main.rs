@@ -1,4 +1,4 @@
-use libopenlipc_sys::rLIPC;
+use libopenlipc_sys::{rLIPC, LipcResult};
 use mqtt_simple::publish_once;
 use std::io::{self, Write};
 
@@ -42,30 +42,30 @@ impl Events {
     }
 }
 
-fn run_and_match(source: &str, in_event: &str, intarg: Option<i32>, strarg: Option<String>) {
-    println!("[{}] {} || {:?} || {:?}", source, in_event, intarg, strarg);
+fn run_and_match(source: &str, in_event: &str, res: Option<LipcResult>) {
+    println!("[{}] {} || {:?}", source, in_event, res);
 
     let ev = Events::from_str(in_event);
     let topic = ev.to_topic();
 
-    let msg = match (ev, intarg, strarg) {
-        (Events::BatteryChanged, Some(batt), _) => {
+    let msg = match (ev, res) {
+        (Events::BatteryChanged, Some(LipcResult::NUM(batt))) => {
             println!("Battery at {}%", batt);
             Some(batt.to_string())
         }
-        (Events::WifiDisconnected, _, _) => {
+        (Events::WifiDisconnected, _) => {
             println!("Wifi Disconnected");
             Some(String::from("0"))
         }
-        (Events::WifiConnected, _, _) => {
+        (Events::WifiConnected, _) => {
             println!("Wifi Connected");
             Some(String::from("1"))
         }
-        (Events::ScreenOn, _, _) => {
+        (Events::ScreenOn, _) => {
             println!("Screen on");
             Some(String::from("1"))
         }
-        (Events::ScreenOff, _, _) => {
+        (Events::ScreenOff, _) => {
             println!("Screen off");
             Some(String::from("0"))
         }
@@ -113,14 +113,14 @@ fn main() {
         },
     ] {
         if filter.events.is_empty() {
-            r.subscribe(filter.source, None, |source, ev, intarg, strarg| {
-                run_and_match(source, ev, intarg, strarg)
+            r.subscribe(filter.source, None, |source, ev, res| {
+                run_and_match(source, ev, res)
             })
             .unwrap();
         } else {
             for e in filter.events {
-                r.subscribe(filter.source, Some(e), |source, ev, intarg, strarg| {
-                    run_and_match(source, ev, intarg, strarg)
+                r.subscribe(filter.source, Some(e), |source, ev, res| {
+                    run_and_match(source, ev, res)
                 })
                 .unwrap();
             }
