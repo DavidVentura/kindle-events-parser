@@ -42,7 +42,7 @@ impl rLIPC {
         if lipc == (std::ptr::null_mut() as *mut c_void) {
             return Err(String::from("Failed to open a connection!"));
         }
-        return Ok(Self { conn: lipc });
+        Ok(Self { conn: lipc })
     }
 
     /// Register a callback for events broadcasted by `service`. Optionally,
@@ -140,7 +140,7 @@ impl rLIPC {
 
         let val;
         unsafe {
-            val = CStr::from_ptr(handle).to_str().unwrap().to_owned().clone();
+            val = CStr::from_ptr(handle).to_str().unwrap().into();
             // Made a copy, we can now free() the string
             LipcFreeString(handle);
         }
@@ -195,7 +195,7 @@ unsafe extern "C" fn ugly_callback(
     {
         let mut int_param: c_int = 0;
         _int_param = match ReturnCodes::from_u32(LipcGetIntParam(event, &mut int_param)).unwrap() {
-            ReturnCodes::OK => Some(int_param.into()),
+            ReturnCodes::OK => Some(int_param),
             ReturnCodes::ERROR_NO_SUCH_PARAM => None,
             e => {
                 println!(
@@ -212,7 +212,7 @@ unsafe extern "C" fn ugly_callback(
         let handle_ptr: *mut *mut c_char = &mut handle;
         _str_param = match ReturnCodes::from_u32(LipcGetStringParam(event, handle_ptr)).unwrap() {
             ReturnCodes::OK => {
-                let val = CStr::from_ptr(handle).to_str().unwrap().to_owned().clone();
+                let val = CStr::from_ptr(handle).to_str().unwrap().into();
                 Some(val)
             }
             ReturnCodes::ERROR_NO_SUCH_PARAM => None,
@@ -227,15 +227,14 @@ unsafe extern "C" fn ugly_callback(
     }
 
     let f = data as *mut Box<dyn FnMut(&str, &str, Option<LipcResult>) + Send>;
-    let _res = if _int_param.is_some() {
-        Some(LipcResult::NUM(_int_param.unwrap()))
-    } else if _str_param.is_some() {
-        Some(LipcResult::STR(_str_param.unwrap()))
+    let _res = if let Some(val) = _int_param {
+        Some(LipcResult::NUM(val))
     } else {
-        None
+        _str_param.map(LipcResult::STR)
     };
+
     (*f)(_source, _name, _res);
-    return 0;
+    0
 }
 
 impl Drop for rLIPC {

@@ -57,6 +57,7 @@ fn bindgen_test_layout_max_align_t() {
     );
 }
 #[doc = " LIPC library handler."]
+#[allow(clippy::upper_case_acronyms)]
 type LIPC = ::std::os::raw::c_void;
 const LIPCcode_LIPC_OK: LIPCcode = 0;
 const LIPCcode_LIPC_ERROR_UNKNOWN: LIPCcode = 1;
