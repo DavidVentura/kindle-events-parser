@@ -39,7 +39,6 @@ pub struct Client {
 pub struct ConnectedClient {
     socket: TcpStream,
     pid: u16,
-    keepalive: u8,
 }
 struct Protocol {}
 
@@ -89,7 +88,6 @@ impl Client {
 
         Ok(ConnectedClient {
             socket: stream,
-            keepalive,
             pid: 0,
         })
     }
@@ -117,7 +115,7 @@ impl ConnectedClient {
             Ok(_) => (),
             Err(e) => {
                 if e.kind() != io::ErrorKind::WouldBlock {
-                    panic!(e)
+                    panic!("{}", e)
                 }
             }
         };
