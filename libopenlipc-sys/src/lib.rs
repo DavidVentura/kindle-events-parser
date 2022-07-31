@@ -25,6 +25,12 @@ macro_rules! code_to_result {
     };
 }
 
+#[derive(Debug)]
+pub enum LipcResult {
+    NUM(i32),
+    STR(String),
+}
+
 impl rLIPC {
     /// Returns a new LIPC client if a connection was successful
     /// Connects to the LIPC bus with no name.
@@ -64,7 +70,7 @@ impl rLIPC {
     /// ```
     pub fn subscribe<F>(&self, service: &str, name: Option<&str>, callback: F) -> Result<(), String>
     where
-        F: FnMut(&str, &str, Option<i32>, Option<String>) + Send,
+        F: FnMut(&str, &str, Option<LipcResult>) + Send,
     {
         let _service = CString::new(service).unwrap();
 
@@ -77,7 +83,7 @@ impl rLIPC {
             }
         };
 
-        let boxed_fn: Box<dyn FnMut(&str, &str, Option<i32>, Option<String>) + Send> =
+        let boxed_fn: Box<dyn FnMut(&str, &str, Option<LipcResult>) + Send> =
             Box::new(callback) as _;
         let double_box = Box::new(boxed_fn);
         let ptr = Box::into_raw(double_box);
@@ -220,8 +226,15 @@ unsafe extern "C" fn ugly_callback(
         }
     }
 
-    let f = data as *mut Box<dyn FnMut(&str, &str, Option<i32>, Option<String>) + Send>;
-    (*f)(_source, _name, _int_param, _str_param);
+    let f = data as *mut Box<dyn FnMut(&str, &str, Option<LipcResult>) + Send>;
+    let _res = if _int_param.is_some() {
+        Some(LipcResult::NUM(_int_param.unwrap()))
+    } else if _str_param.is_some() {
+        Some(LipcResult::STR(_str_param.unwrap()))
+    } else {
+        None
+    };
+    (*f)(_source, _name, _res);
     return 0;
 }
 

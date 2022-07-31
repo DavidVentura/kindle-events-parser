@@ -12,8 +12,8 @@ fn main() {
     }
 
     println!("Subscribing to ALL power events");
-    let res = r.subscribe("com.lab126.powerd", None, |a, b, opt_int, opt_string| {
-        println!("[{}] {} || {:?} || {:?}", a, b, opt_int, opt_string);
+    let res = r.subscribe("com.lab126.powerd", None, |a, b, res| {
+        println!("[{}] {} || {:?}", a, b, res);
 
         let reader_status = r
             .get_str_prop("com.lab126.acxreaderplugin", "allReaderData")
