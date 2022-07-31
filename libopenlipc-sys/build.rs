@@ -1,6 +1,6 @@
-//use std::env;
+use std::env;
 fn main() {
-    //let sysroot_lib_dir = env::var("SYSROOT_LIB_DIR").expect("Set SYSROOT_LIB_DIR pointing to Amazon-Kindle-Cross-Toolchain/arm-kindle-linux-gnueabi/arm-kindle-linux-gnueabi/sysroot/lib/");
+    env::set_var("SYSROOT_LIB_DIR", "Amazon-Kindle-Cross-Toolchain/arm-kindle-linux-gnueabi/arm-kindle-linux-gnueabi/sysroot/lib/");
 
     println!("cargo:rustc-link-search=so");
     //println!("cargo:rustc-link-search={}", sysroot_lib_dir);

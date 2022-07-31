@@ -1,0 +1,3 @@
+[submodule "libopenlipc-sys/Amazon-Kindle-Cross-Toolchain"]
+	path = libopenlipc-sys/Amazon-Kindle-Cross-Toolchain
+	url = git@github.com:DavidVentura/Amazon-Kindle-Cross-Toolchain.git
