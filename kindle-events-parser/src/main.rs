@@ -9,7 +9,7 @@ enum Events {
     ScreenOff,
     ScreenOn,
     BatteryChanged,
-    Unknown,
+    Unknown(String),
 }
 
 #[derive(Debug)]
@@ -17,6 +17,8 @@ struct EventFilter<'a> {
     source: &'a str,
     events: Vec<&'a str>,
 }
+
+const KINDLE_TOPIC: &str = "KINDLE/BOOK";
 
 impl Events {
     fn from_str(s: &str) -> Events {
@@ -27,7 +29,7 @@ impl Events {
             "battLevelChanged" => Events::BatteryChanged,
             "suspending" => Events::WifiDisconnected,
             "readyToSuspend" => Events::WifiDisconnected,
-            _ => Events::Unknown,
+            _ => Events::Unknown(s.to_string()),
         }
     }
     fn to_topic(&self) -> Option<&'static str> {
@@ -37,7 +39,7 @@ impl Events {
             Events::ScreenOff => Some("KINDLE/SCREEN_STATE"),
             Events::ScreenOn => Some("KINDLE/SCREEN_STATE"),
             Events::BatteryChanged => Some("KINDLE/BATTERY_STATE"),
-            Events::Unknown => None,
+            Events::Unknown(_) => None,
         }
     }
 }
@@ -77,19 +79,22 @@ fn run_and_match(source: &str, in_event: &str, res: Option<LipcResult>) {
 
     if let Some(m) = msg {
         let topic = topic.unwrap();
-        println!("Publishing {} to {}", m, topic);
-        let res = publish_once(
-            String::from("KINDLE"),
-            String::from("192.168.20.125"),
-            topic,
-            m.as_str(),
-            false,
-        );
-        match res {
+        match send(topic, m.as_str()) {
             Err(e) => println!("Failed to publish! {:?}", e),
             Ok(()) => (),
         }
     }
+}
+
+fn send(topic: &str, value: &str) -> Result<(), Box<dyn std::error::Error>> {
+    println!("Publishing {} to {}", value, topic);
+    publish_once(
+        String::from("KINDLE"),
+        String::from("192.168.20.125"),
+        topic,
+        value,
+        false,
+    )
 }
 
 fn main() {
@@ -111,6 +116,10 @@ fn main() {
             source: "com.lab126.wifid",
             events: vec!["cmConnected"],
         },
+        EventFilter {
+            source: "com.lab126.acxreaderplugin",
+            events: vec!["allReaderData"],
+        },
     ] {
         if filter.events.is_empty() {
             r.subscribe(filter.source, None, |source, ev, res| {
@@ -127,9 +136,21 @@ fn main() {
         }
     }
 
+    let mut counter = 0;
     loop {
-        std::thread::sleep(std::time::Duration::from_secs(1));
+        std::thread::sleep(std::time::Duration::from_secs(5));
         print!(".");
+        if counter == 60 {
+            // once every 5 minutes
+            if let Ok(data) = r.get_str_prop("com.lab126.acxreaderplugin", "allReaderData") {
+                match send(KINDLE_TOPIC, data.as_str()) {
+                    Err(e) => println!("Failed to publish! {:?}", e),
+                    Ok(()) => (),
+                }
+            }
+            counter = 0;
+        }
+        counter += 1;
         io::stdout().flush().unwrap();
     }
 }
