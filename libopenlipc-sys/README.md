@@ -4,16 +4,22 @@ Kindle liblipc wrapper in rust. Only a very small subset of functionality is exp
 
 Used [OpenLIPC headers](https://github.com/Arkq/openlipc) and converted them with `bindgen`. [Docs are here](https://arkq.github.io/openlipc).
 
+Download the target
+
+```bash
+rustup target add armv7-unknown-linux-gnueabi
+```
+
 Get the [toolchain](https://github.com/samsheff/Amazon-Kindle-Cross-Toolchain/tree/master/arm-kindle-linux-gnueabi)
 Configure it in your `.cargo/config`:
 
-```
+```toml
 [target.armv7-unknown-linux-gnueabi]
 linker = "Amazon-Kindle-Cross-Toolchain/arm-kindle-linux-gnueabi/bin/arm-kindle-linux-gnueabi-cc"
 ```
 
 Export the path to sysroot/lib before compiling:
-```
+```bash
 export SYSROOT_LIB_DIR=~/git/Amazon-Kindle-Cross-Toolchain/arm-kindle-linux-gnueabi/arm-kindle-linux-gnueabi/sysroot/lib/
 ```
 
