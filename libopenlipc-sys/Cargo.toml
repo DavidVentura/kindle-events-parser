@@ -14,3 +14,9 @@ enum_primitive = "0.1.1"
 
 [package.metadata.docs.rs]
 default-target = "armv7-unknown-linux-gnueabi"
+
+[profile.release]
+strip = "symbols"
+
+[profile.dev]
+strip = "symbols"
